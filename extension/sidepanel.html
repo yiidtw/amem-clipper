@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>amem</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        font-size: 13px;
+        color: #1a1a1a;
+        background: #f5f5f7;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      .header {
+        padding: 14px 16px;
+        background: linear-gradient(135deg, #4f46e5, #9333ea);
+        color: #fff;
+      }
+      .header h1 { font-size: 15px; font-weight: 600; }
+      .header p { font-size: 11px; opacity: 0.85; margin-top: 2px; }
+      .section {
+        padding: 14px 16px;
+        border-bottom: 1px solid #e5e5ea;
+        background: #fff;
+      }
+      .section h2 {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #6b7280;
+        margin-bottom: 10px;
+      }
+      button {
+        appearance: none;
+        border: 1px solid #d1d5db;
+        background: #fff;
+        color: #1a1a1a;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        margin-right: 6px;
+        margin-bottom: 6px;
+      }
+      button.primary {
+        background: #4f46e5;
+        border-color: #4f46e5;
+        color: #fff;
+      }
+      button.danger {
+        background: #dc2626;
+        border-color: #dc2626;
+        color: #fff;
+      }
+      button:disabled { opacity: 0.5; cursor: not-allowed; }
+      .status {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 11px;
+        color: #374151;
+        background: #f3f4f6;
+        padding: 8px 10px;
+        border-radius: 4px;
+        white-space: pre-wrap;
+      }
+      ul.captures {
+        list-style: none;
+        font-size: 12px;
+      }
+      ul.captures li {
+        padding: 6px 0;
+        border-bottom: 1px dotted #e5e5ea;
+      }
+      ul.captures li:last-child { border-bottom: none; }
+      ul.captures .title { font-weight: 500; color: #111827; }
+      ul.captures .url { color: #6b7280; font-size: 11px; word-break: break-all; }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>amem</h1>
+      <p>Local-first knowledge capture</p>
+    </div>
+
+    <div class="section">
+      <h2>Capture</h2>
+      <button id="btn-capture-page" class="primary">Capture this page</button>
+    </div>
+
+    <div class="section">
+      <h2>Self-recording</h2>
+      <button id="btn-record-start" class="primary">Start</button>
+      <button id="btn-record-stop" class="danger">Stop</button>
+      <div id="record-status" class="status">idle</div>
+    </div>
+
+    <div class="section">
+      <h2>Bridge (amem-sh)</h2>
+      <div id="bridge-status" class="status">checking…</div>
+    </div>
+
+    <div class="section">
+      <h2>Recent captures</h2>
+      <ul id="captures" class="captures"><li>none yet</li></ul>
+    </div>
+
+    <script src="sidepanel.js"></script>
+  </body>
+</html>

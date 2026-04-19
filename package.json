@@ -1,0 +1,27 @@
+{
+  "name": "amem-extension",
+  "version": "0.1.0",
+  "description": "Local-first knowledge capture. Snapshot and compile any page into your personal wiki.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "verify": "node scripts/verify-manifest.mjs",
+    "build:dev": "bash scripts/build-dev.sh",
+    "build:prod": "bash scripts/build-prod.sh",
+    "build": "npm run verify && npm run build:dev",
+    "icons": "bash scripts/generate-icons.sh",
+    "test": "vitest run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/yiidtw/amem-extension.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yiidtw/amem-extension/issues"
+  },
+  "homepage": "https://github.com/yiidtw/amem-extension#readme",
+  "license": "MIT",
+  "devDependencies": {
+    "vitest": "^1.6.0"
+  }
+}
