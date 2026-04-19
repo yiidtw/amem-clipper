@@ -184,10 +184,256 @@ function recordingStatus() {
 }
 
 // ---------------------------------------------------------------------------
-// Bridge client placeholder (amem-sh on ws://localhost:7600)
+// Bridge client (amem-sh on ws://localhost:7600)
 // ---------------------------------------------------------------------------
 
 let bridgeWs = null;
+const agentTabs = new Map(); // agentId → tabId
+let bridgeActionLog = []; // [{action, selector, boundingRect, timestamp}, ...]
+
+// Clean up if a tracked agent tab is closed
+chrome.tabs.onRemoved.addListener((tabId) => {
+  for (const [agent, tid] of agentTabs) {
+    if (tid === tabId) agentTabs.delete(agent);
+  }
+});
+
+// Wait for a tab to finish loading (with 30s timeout)
+function waitForTabLoad(tabId) {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      chrome.tabs.onUpdated.removeListener(listener);
+      reject(new Error('Tab load timeout'));
+    }, 30000);
+
+    function listener(id, changeInfo) {
+      if (id === tabId && changeInfo.status === 'complete') {
+        chrome.tabs.onUpdated.removeListener(listener);
+        clearTimeout(timeout);
+        resolve();
+      }
+    }
+    chrome.tabs.onUpdated.addListener(listener);
+
+    // Check if already loaded
+    chrome.tabs.get(tabId).then(tab => {
+      if (tab.status === 'complete') {
+        chrome.tabs.onUpdated.removeListener(listener);
+        clearTimeout(timeout);
+        resolve();
+      }
+    });
+  });
+}
+
+// Execute a bridge command
+async function bridgeExecute(cmd) {
+  const { action, params = {}, agentId: _agentId } = cmd;
+  const agentId = _agentId || '_default';
+  let bridgeTabId = agentTabs.get(agentId) || null;
+
+  switch (action) {
+    case 'navigate': {
+      if (bridgeTabId) {
+        try {
+          await chrome.tabs.get(bridgeTabId);
+          await chrome.tabs.update(bridgeTabId, { url: params.url, active: true });
+        } catch {
+          const tab = await chrome.tabs.create({ url: params.url });
+          agentTabs.set(agentId, tab.id);
+          bridgeTabId = tab.id;
+        }
+      } else {
+        const tab = await chrome.tabs.create({ url: params.url });
+        agentTabs.set(agentId, tab.id);
+        bridgeTabId = tab.id;
+      }
+      if (!params.noWait) {
+        await waitForTabLoad(bridgeTabId);
+      } else {
+        // Give the tab a moment to start loading, but don't wait for complete
+        await new Promise(r => setTimeout(r, 2000));
+      }
+      if (isRecording) {
+        bridgeActionLog.push({
+          action: 'navigate',
+          url: params.url,
+          timestamp: Date.now() - recordingStartedAt,
+        });
+      }
+      return { success: true };
+    }
+
+    case 'click': {
+      if (!bridgeTabId) return { success: false, error: 'No active tab. Navigate first.' };
+      const [result] = await chrome.scripting.executeScript({
+        target: { tabId: bridgeTabId },
+        func: (selector) => {
+          const el = document.querySelector(selector);
+          if (!el) return { error: `Element not found: ${selector}` };
+          el.scrollIntoView({ block: 'center' });
+          const rect = el.getBoundingClientRect();
+          const x = rect.left + rect.width / 2;
+          const y = rect.top + rect.height / 2;
+          const opts = { bubbles: true, cancelable: true, view: window, clientX: x, clientY: y };
+          el.dispatchEvent(new MouseEvent('mousedown', opts));
+          el.dispatchEvent(new MouseEvent('mouseup', opts));
+          el.dispatchEvent(new MouseEvent('click', opts));
+          return { clicked: true, tag: el.tagName, boundingRect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height } };
+        },
+        args: [params.selector],
+      });
+      if (result.result?.error) return { success: false, error: result.result.error };
+      if (isRecording && result.result?.clicked) {
+        bridgeActionLog.push({
+          action: 'click',
+          selector: params.selector,
+          boundingRect: result.result.boundingRect,
+          timestamp: Date.now() - recordingStartedAt,
+        });
+      }
+      return { success: true, data: result.result };
+    }
+
+    case 'type': {
+      if (!bridgeTabId) return { success: false, error: 'No active tab. Navigate first.' };
+      const [result] = await chrome.scripting.executeScript({
+        target: { tabId: bridgeTabId },
+        func: (selector, text, opts) => {
+          const el = document.querySelector(selector);
+          if (!el) return { error: `Element not found: ${selector}` };
+          el.focus();
+          el.scrollIntoView({ block: 'center' });
+
+          if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+            // Standard form elements -- use native setter to trigger React/Vue
+            const proto = el.tagName === 'INPUT'
+              ? HTMLInputElement.prototype
+              : HTMLTextAreaElement.prototype;
+            const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+            if (setter) setter.call(el, opts?.append ? el.value + text : text);
+            else el.value = opts?.append ? el.value + text : text;
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+          } else {
+            // Contenteditable (Twitter/X, Notion, etc.)
+            if (!opts?.append) {
+              const sel = window.getSelection();
+              const range = document.createRange();
+              range.selectNodeContents(el);
+              sel.removeAllRanges();
+              sel.addRange(range);
+            }
+            document.execCommand('insertText', false, text);
+          }
+          const rect = el.getBoundingClientRect();
+          return { typed: true, boundingRect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height } };
+        },
+        args: [params.selector, params.text, { append: params.append }],
+      });
+      if (result.result?.error) return { success: false, error: result.result.error };
+      if (isRecording && result.result?.typed) {
+        bridgeActionLog.push({
+          action: 'type',
+          selector: params.selector,
+          text: params.text,
+          boundingRect: result.result.boundingRect,
+          timestamp: Date.now() - recordingStartedAt,
+        });
+      }
+      return { success: true, data: result.result };
+    }
+
+    case 'wait': {
+      if (!bridgeTabId) return { success: false, error: 'No active tab. Navigate first.' };
+      const timeout = params.timeout || 10000;
+      const [result] = await chrome.scripting.executeScript({
+        target: { tabId: bridgeTabId },
+        func: (selector, timeout) => {
+          return new Promise((resolve) => {
+            const existing = document.querySelector(selector);
+            if (existing) return resolve({ found: true });
+
+            const observer = new MutationObserver(() => {
+              if (document.querySelector(selector)) {
+                observer.disconnect();
+                resolve({ found: true });
+              }
+            });
+            observer.observe(document.body, { childList: true, subtree: true });
+
+            setTimeout(() => {
+              observer.disconnect();
+              resolve({ error: `Timeout (${timeout}ms) waiting for: ${selector}` });
+            }, timeout);
+          });
+        },
+        args: [params.selector, timeout],
+      });
+      if (result.result?.error) return { success: false, error: result.result.error };
+      return { success: true, data: result.result };
+    }
+
+    case 'extract': {
+      if (!bridgeTabId) return { success: false, error: 'No active tab. Navigate first.' };
+      const [result] = await chrome.scripting.executeScript({
+        target: { tabId: bridgeTabId },
+        func: (selector, attr) => {
+          const els = document.querySelectorAll(selector);
+          if (els.length === 0) return [];
+          return Array.from(els).map(el => {
+            if (attr) return el.getAttribute(attr);
+            return el.innerText || el.textContent;
+          });
+        },
+        args: [params.selector, params.attr || null],
+      });
+      return { success: true, data: result.result };
+    }
+
+    case 'evaluate': {
+      if (!bridgeTabId) return { success: false, error: 'No active tab. Navigate first.' };
+      const [result] = await chrome.scripting.executeScript({
+        target: { tabId: bridgeTabId },
+        world: 'MAIN',
+        func: async (code) => {
+          try { return { value: await eval(code) }; }
+          catch (e) { return { error: e.message }; }
+        },
+        args: [params.expression],
+      });
+      if (result.result?.error) return { success: false, error: result.result.error };
+      return { success: true, data: result.result.value };
+    }
+
+    case 'screenshot': {
+      const dataUrl = await chrome.tabs.captureVisibleTab(null, { format: 'png' });
+      return { success: true, data: { dataUrl } };
+    }
+
+    case 'sleep': {
+      await new Promise(r => setTimeout(r, params.ms || 1000));
+      return { success: true };
+    }
+
+    case 'tab_info': {
+      if (!bridgeTabId) return { success: false, error: 'No active tab.' };
+      const tab = await chrome.tabs.get(bridgeTabId);
+      return { success: true, data: { url: tab.url, title: tab.title, status: tab.status } };
+    }
+
+    case 'ping': {
+      return { success: true, data: { pong: true, agentId, tabId: bridgeTabId, agents: Object.fromEntries(agentTabs), extensionId: chrome.runtime.id } };
+    }
+
+    case 'action_log': {
+      return { success: true, data: bridgeActionLog };
+    }
+
+    default:
+      return { success: false, error: `Unknown action: ${action}` };
+  }
+}
 
 function bridgeConnect() {
   if (bridgeWs && bridgeWs.readyState === WebSocket.OPEN) return;
@@ -200,9 +446,26 @@ function bridgeConnect() {
     bridgeWs.onerror = () => {
       bridgeWs = null;
     };
-    bridgeWs.onmessage = (event) => {
-      // Day 1-2: log only. Day 2+ will wire real commands.
-      console.log('[amem:bridge] message:', event.data);
+    bridgeWs.onmessage = async (event) => {
+      let msg;
+      try {
+        msg = JSON.parse(event.data);
+      } catch {
+        console.warn('[amem:bridge] non-JSON message:', event.data);
+        return;
+      }
+
+      // Execute command and reply
+      try {
+        const result = await bridgeExecute(msg);
+        if (bridgeWs && bridgeWs.readyState === WebSocket.OPEN) {
+          bridgeWs.send(JSON.stringify({ id: msg.id, ...result }));
+        }
+      } catch (err) {
+        if (bridgeWs && bridgeWs.readyState === WebSocket.OPEN) {
+          bridgeWs.send(JSON.stringify({ id: msg.id, success: false, error: err.message }));
+        }
+      }
     };
   } catch (err) {
     console.warn('[amem:bridge] connect failed:', err.message);

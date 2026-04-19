@@ -66,6 +66,29 @@ if (Array.isArray(manifest.permissions) && manifest.permissions.includes('identi
   errors.push('manifest contains "identity" permission (must be removed)');
 }
 
+// Required permissions: self-recording is a shipped feature, so tabCapture + offscreen
+// must be present in the source manifest AND must survive any prod-build stripping.
+for (const required of ['tabCapture', 'offscreen', 'downloads']) {
+  if (!manifest.permissions?.includes(required)) {
+    errors.push(`manifest is missing required permission "${required}" (self-recording workflow depends on it)`);
+  }
+}
+
+// If dist/ has been built, verify it preserves the same required permissions.
+const distManifestPath = path.join(ROOT, 'dist', 'manifest.json');
+if (fs.existsSync(distManifestPath)) {
+  const distManifest = JSON.parse(fs.readFileSync(distManifestPath, 'utf8'));
+  for (const required of ['tabCapture', 'offscreen', 'downloads']) {
+    if (!distManifest.permissions?.includes(required)) {
+      errors.push(`dist/manifest.json stripped required permission "${required}" — self-recording will break in prod builds`);
+    }
+  }
+  const distOffscreen = path.join(ROOT, 'dist', 'offscreen.html');
+  if (!fs.existsSync(distOffscreen)) {
+    errors.push('dist/offscreen.html missing — prod build dropped a required file');
+  }
+}
+
 if (errors.length) {
   for (const e of errors) console.error(`[verify] FAIL: ${e}`);
   process.exit(1);
