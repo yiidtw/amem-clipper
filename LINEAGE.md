@@ -1,6 +1,6 @@
 # Lineage
 
-amem-extension is a clean rewrite of the earlier crossmem-chrome prototype.
+amem Clipper (repo `amem-clipper`, formerly `amem-extension`) is a clean rewrite of the earlier crossmem-chrome prototype.
 No code is ported verbatim; every file in this repository was written fresh
 for the amem v1 reboot. The prior project is referenced here solely to
 acknowledge the design lineage — product goals, permission shape, and the

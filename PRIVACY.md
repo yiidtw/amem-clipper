@@ -43,8 +43,8 @@ amem does **not** collect, transmit, or store any user data on external servers.
 
 ## Open source
 
-amem is open source. Review the code at: https://github.com/yiidtw/amem-extension
+amem is open source. Review the code at: https://github.com/yiidtw/amem-clipper
 
 ## Contact
 
-For questions about this policy, open an issue at: https://github.com/yiidtw/amem-extension/issues
+For questions about this policy, open an issue at: https://github.com/yiidtw/amem-clipper/issues

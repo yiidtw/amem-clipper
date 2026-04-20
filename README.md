@@ -1,4 +1,6 @@
-# amem-extension
+# amem Clipper
+
+> Repo slug: `amem-clipper` (renamed from `amem-extension` 2026-04-21). Product positioning per [RFC-001](https://github.com/yiidtw/amem-hq/blob/main/docs/src/rfcs/001-bridge-first.md) — peripheral to the native `amem` CLI.
 
 Chrome MV3 extension for amem — local-first knowledge capture. Snapshot and
 compile any page into your personal wiki, and record the active tab into

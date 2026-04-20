@@ -1,5 +1,5 @@
 {
-  "name": "amem-extension",
+  "name": "amem-clipper",
   "version": "0.1.0",
   "description": "Local-first knowledge capture. Snapshot and compile any page into your personal wiki.",
   "private": true,
@@ -14,12 +14,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/yiidtw/amem-extension.git"
+    "url": "git+ssh://git@github.com/yiidtw/amem-clipper.git"
   },
   "bugs": {
-    "url": "https://github.com/yiidtw/amem-extension/issues"
+    "url": "https://github.com/yiidtw/amem-clipper/issues"
   },
-  "homepage": "https://github.com/yiidtw/amem-extension#readme",
+  "homepage": "https://github.com/yiidtw/amem-clipper#readme",
   "license": "MIT",
   "devDependencies": {
     "vitest": "^1.6.0"
