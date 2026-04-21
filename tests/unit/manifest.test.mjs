@@ -11,8 +11,8 @@ describe('manifest.json', () => {
   it('uses manifest v3', () => {
     expect(manifest.manifest_version).toBe(3);
   });
-  it('is named amem', () => {
-    expect(manifest.name).toBe('amem');
+  it('is named amem Clipper', () => {
+    expect(manifest.name).toBe('amem Clipper');
   });
   it('has no oauth2 block', () => {
     expect(manifest.oauth2).toBeUndefined();
