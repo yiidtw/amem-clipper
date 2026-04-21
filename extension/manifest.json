@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "amem",
+  "name": "amem Clipper",
   "version": "0.1.0",
-  "description": "Local-first knowledge capture. Snapshot and compile any page into your personal wiki.",
+  "description": "Local-first knowledge capture. Snapshot pages into your personal wiki, powered by the amem CLI.",
   "permissions": [
     "storage",
     "activeTab",
