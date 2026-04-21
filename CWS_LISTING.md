@@ -25,7 +25,7 @@ Click the amem button, and the current page becomes part of your personal wiki: 
 
 ### How it works
 
-1. Install the `amem` CLI once (`curl -fsSL https://amem.sh/install | sh`). Required.
+1. Install the `amem` CLI once — `cargo install amem` (Rust required) or download from <https://github.com/yiidtw/amem-sh/releases>. Required.
 2. Install this extension.
 3. amem Clipper connects to the local `amem` bridge automatically. When it can't find the bridge, it tells you plainly — no hidden failures.
 4. Click. Capture. Search. Recall.
@@ -39,7 +39,7 @@ amem Clipper is a peripheral, like an Apple Watch to your iPhone. The amem CLI i
 - No analytics, no telemetry, no backend.
 - All captures write to **your** `~/.amem/` via a loopback WebSocket.
 - No third-party network calls from the extension.
-- Full policy: <https://docs.amem.sh/privacy.html>
+- Full policy: <https://docs.amem.sh/privacy>
 
 ### Open source
 
