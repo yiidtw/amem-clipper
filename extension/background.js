@@ -28,6 +28,11 @@ chrome.runtime.onInstalled.addListener(() => {
     title: 'amem: capture selection',
     contexts: ['selection'],
   });
+  chrome.contextMenus.create({
+    id: 'amem-screenshot',
+    title: 'amem: screenshot this page',
+    contexts: ['page'],
+  });
 });
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
@@ -36,6 +41,8 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     await capturePage(tab.id);
   } else if (info.menuItemId === 'amem-capture-selection') {
     await captureSelection(tab.id, info.selectionText || '');
+  } else if (info.menuItemId === 'amem-screenshot') {
+    await captureScreenshot(tab.id);
   }
 });
 
@@ -76,6 +83,43 @@ async function captureSelection(tabId, text) {
     return { success: true, data: record };
   } catch (err) {
     console.error('[amem:capture] captureSelection failed:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+async function captureScreenshot(tabId) {
+  try {
+    const tab = await chrome.tabs.get(tabId);
+    // captureVisibleTab operates on the active tab of its windowId. Pass the
+    // target tab's windowId to be safe when the side panel is on a different one.
+    const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, {
+      format: 'png',
+    });
+    const ts = new Date().toISOString().replace(/[:.]/g, '-');
+    const slug = (tab.title || 'page')
+      .replace(/[^a-z0-9]+/gi, '-')
+      .replace(/^-+|-+$/g, '')
+      .toLowerCase()
+      .slice(0, 40) || 'page';
+    const filename = `amem/${ts}_${slug}.png`;
+    const downloadId = await chrome.downloads.download({
+      url: dataUrl,
+      filename,
+      saveAs: false,
+    });
+    const record = {
+      type: 'screenshot',
+      url: tab.url,
+      title: tab.title,
+      filename,
+      downloadId,
+      capturedAt: new Date().toISOString(),
+    };
+    await appendCaptureLog(record);
+    console.log('[amem:capture] screenshot saved:', filename);
+    return { success: true, data: record };
+  } catch (err) {
+    console.error('[amem:capture] captureScreenshot failed:', err);
     return { success: false, error: err.message };
   }
 }
@@ -505,6 +549,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       return true;
     case 'capture_selection':
       captureSelection(message.tabId, message.text || '').then(reply).catch((e) => reply({ success: false, error: e.message }));
+      return true;
+    case 'capture_screenshot':
+      captureScreenshot(message.tabId).then(reply).catch((e) => reply({ success: false, error: e.message }));
       return true;
     case 'start_recording':
       startRecording(message.params || {}).then(reply).catch((e) => reply({ success: false, error: e.message }));

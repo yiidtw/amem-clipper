@@ -73,6 +73,19 @@ async function onCapturePage() {
   await refreshCaptures();
 }
 
+async function onScreenshot() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab) return;
+  $('capture-status').textContent = 'capturing…';
+  const res = await send('capture_screenshot', { tabId: tab.id });
+  if (!res || !res.success) {
+    $('capture-status').textContent = 'error: ' + (res?.error || 'unknown');
+    return;
+  }
+  $('capture-status').textContent = `saved ${res.data.filename}`;
+  await refreshCaptures();
+}
+
 async function onRecordStart() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   const res = await send('start_recording', { params: { tabId: tab?.id } });
@@ -93,6 +106,7 @@ async function onRecordStop() {
 }
 
 $('btn-capture-page').addEventListener('click', onCapturePage);
+$('btn-screenshot').addEventListener('click', onScreenshot);
 $('btn-record-start').addEventListener('click', onRecordStart);
 $('btn-record-stop').addEventListener('click', onRecordStop);
 
