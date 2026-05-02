@@ -3,36 +3,46 @@
 Submission reference. Copy these fields into the CWS developer dashboard.
 
 ## Title (max 45 chars, bold)
-**amem Clipper — Local-First Web Capture** (40 chars)
+**amem Clipper — Memory for AI agents** (38 chars)
 
 ## Short description (max 132 chars)
-Snapshot any page into your personal, local-first wiki. Paired with the amem CLI — everything stays on your machine.
-(113 chars)
+Your AI agent's eyes on the web. Capture pages into a local-first wiki the agent recalls — and fact-checks against — via MCP.
+(132 chars)
 
 ## Detailed description
 
-amem Clipper is the browser companion to **amem**, a local-first knowledge capture system for people who want to own their notes forever.
+amem Clipper is the **web sensor** for [amem](https://amem.sh) — agent memory for the era of frontier models.
 
-Click the amem button, and the current page becomes part of your personal wiki: title, URL, selected text, even a full tab recording if you enable it. No cloud accounts. No trackers. No telemetry. Nothing leaves your machine unless you tell it to.
+When you read something worth remembering, click amem. The page goes into your local wiki. Later, when Claude / ChatGPT / any MCP-aware agent answers a question, it can cite directly from what *you* read — and warn you when the agent's draft contradicts something already in your wiki.
+
+No cloud. No accounts. No telemetry. Your captures live in `~/.amem/` on your own Mac, and are read by agents through a loopback bridge — never uploaded.
 
 ### What amem Clipper does
 
-- **One-click capture** — snapshot the current tab into your wiki
+- **One-click capture** — snapshot the current tab into your local wiki
 - **Side panel** — review recent captures, search, open in your editor
-- **Recording** — capture a live tab session as `.webm` for demos and walkthroughs
+- **Tab recording** — capture a live tab session as `.webm` for demos and walkthroughs
 - **Bridge mode** — talks to your local `amem` binary over `ws://127.0.0.1:7600` so captures land in `~/.amem/` as structured markdown
-- **Agent-ready** — your captured wiki is served via MCP, so Claude, ChatGPT, and other agents can read your own knowledge base when you ask
+- **Agent-ready** — your captured wiki is served via MCP, so Claude, ChatGPT, and other agents can read your own knowledge base when answering you (and, soon, fact-check their own claims against it)
 
 ### How it works
 
-1. Install the `amem` CLI once — `cargo install amem` (Rust required) or download from <https://github.com/yiidtw/amem-sh/releases>. Required.
+1. Install the `amem` CLI once — `cargo install amem` (Rust required) or download from <https://github.com/yiidtw/amem-sh/releases>. **Required.**
 2. Install this extension.
 3. amem Clipper connects to the local `amem` bridge automatically. When it can't find the bridge, it tells you plainly — no hidden failures.
 4. Click. Capture. Search. Recall.
 
-### Why "Clipper"
+### Why it's different
 
-amem Clipper is a peripheral, like an Apple Watch to your iPhone. The amem CLI is the core — storage, compile, recall, and MCP all live there. Clipper surfaces the two capture moments a browser is best at (a tab, a recording) without trying to be the whole product.
+amem Clipper isn't a PKM tool that an agent can query. It's a sensor in a stack designed for the agent first:
+
+| Layer | What it is |
+|---|---|
+| **Sensor** (this extension) | Captures from the web |
+| **Brain** (`amem-sh` CLI) | Stores, compiles, fact-checks |
+| **Access** (MCP) | Frontier models read via MCP — same protocol Claude, Cursor, etc. already speak |
+
+The Apple Watch metaphor: this extension is dark without the brain running, by design. A sensor with no brain is a window with no eye behind it.
 
 ### Privacy
 
@@ -59,7 +69,7 @@ English
 
 ## Permission justifications (for CWS "single purpose" section)
 
-amem Clipper has one purpose: **capture the current web page into the user's local knowledge base via the `amem` CLI**. Each permission exists to support that single flow.
+amem Clipper has one purpose: **capture the current web page into the user's local agent memory via the `amem` CLI.** Each permission supports that single flow.
 
 | Permission | Justification |
 |---|---|
@@ -75,20 +85,29 @@ amem Clipper has one purpose: **capture the current web page into the user's loc
 | `downloads` | Save `.webm` recordings to the Downloads folder. |
 | `host_permissions: <all_urls>` | Let capture work on any page the user visits. The extension never reads a page without an explicit user action. |
 
-## Promo video (optional, recommended)
-Recordly-produced 90-second demo showing:
-1. (0:00–0:15) User sees a page worth saving; clicks amem action → capture lands in wiki
-2. (0:15–0:40) `amem recall` in terminal finds the page by content
-3. (0:40–0:75) Side panel opens; user records a short tab session
-4. (0:75–0:90) Agent (Claude Code) uses `amem_recall` MCP tool to answer a question from the user's own wiki
+## Promo video (optional)
+Skip for v0.1.0 launch — submit screenshots only. A 90-second demo can be added in a follow-up update.
 
-Host video at `https://amem.sh/demo.mp4` (or YouTube unlisted).
+## Screenshots checklist (1280×800, 3 minimum for submission)
 
-## Screenshots checklist (1280×800, up to 5)
-Pending — user captures after UI gray-out states land (RFC-001). Minimum viable set for MVP submission:
+For v0.1.0, the minimum viable set:
 
-1. Side panel open on an arxiv abstract, amem action highlighted
-2. Captured entry in the wiki list with title + excerpt
-3. Terminal showing `amem recall "transformer"` with a hit
-4. (optional) Side panel recording mode
-5. (optional) Claude Code using `amem_recall` MCP tool
+1. **Side panel open on an arxiv abstract** — amem button in the toolbar, side panel showing the captured entry with title + URL
+2. **Capture history list** — side panel showing 3-5 captured items, each with title + favicon + relative timestamp
+3. **Bridge status** — side panel showing "Bridge connected · Wiki at ~/.amem/" status row + a "Disconnected — install amem" state for contrast (one screenshot of each, or a side-by-side composite)
+
+Optional 4th and 5th if time permits:
+4. Recording mode active in side panel
+5. Claude Code (or other MCP client) using `amem_recall` tool to answer a question from the user's wiki
+
+### Capture procedure
+
+1. `cd ~/claude_projects/amem-clipper && npm run build:prod` (already done — `dist/` is fresh)
+2. Chrome → `chrome://extensions` → toggle Developer mode → Load unpacked → select `~/claude_projects/amem-clipper/dist/`
+3. Open `chrome://settings/appearance` and ensure window is sized for 1280×800 (or use the macOS Screenshot tool with size hints)
+4. Visit `https://arxiv.org/abs/1706.03762` (the Transformer paper — visually distinctive)
+5. Open the side panel (toolbar icon → side panel option) and click capture
+6. Use macOS Cmd+Shift+4 to capture the side panel + page area; resize/crop to 1280×800
+7. Save as `screenshots/01-sidepanel-arxiv.png`, `02-history-list.png`, `03-bridge-status.png`
+
+Or just hand them to me with `aide-skill chrome` driving capture — I can automate steps 4–7 once the extension is loaded.
