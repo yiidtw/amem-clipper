@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "amem Clipper",
-  "version": "0.1.0",
-  "description": "Local-first knowledge capture. Snapshot pages into your personal wiki, powered by the amem CLI.",
+  "version": "0.2.0",
+  "description": "The first user-installable browser skills catalog for AI agents. Bundled or BYO. Each skill is a small action your agent can invoke.",
   "permissions": [
     "storage",
     "activeTab",
@@ -47,6 +47,11 @@
     {
       "matches": ["https://gemini.google.com/*"],
       "js": ["content-scripts/gemini-autosave.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://arxiv.org/abs/*", "https://www.arxiv.org/abs/*"],
+      "js": ["content-scripts/arxiv-autocapture.js"],
       "run_at": "document_idle"
     }
   ],
