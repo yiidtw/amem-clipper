@@ -21,6 +21,32 @@
       }
       .header h1 { font-size: 15px; font-weight: 600; }
       .header p { font-size: 11px; opacity: 0.85; margin-top: 2px; }
+
+      /* Tab strip */
+      .tabs {
+        display: flex;
+        background: #fff;
+        border-bottom: 1px solid #e5e5ea;
+      }
+      .tab {
+        flex: 1;
+        padding: 10px 12px;
+        text-align: center;
+        font-size: 12px;
+        font-weight: 500;
+        color: #6b7280;
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        user-select: none;
+      }
+      .tab:hover { color: #1f2937; }
+      .tab.active {
+        color: #4f46e5;
+        border-bottom-color: #4f46e5;
+      }
+      .panel { display: none; }
+      .panel.active { display: block; }
+
       .section {
         padding: 14px 16px;
         border-bottom: 1px solid #e5e5ea;
@@ -77,36 +103,143 @@
       ul.captures li:last-child { border-bottom: none; }
       ul.captures .title { font-weight: 500; color: #111827; }
       ul.captures .url { color: #6b7280; font-size: 11px; word-break: break-all; }
+
+      /* Skill cards */
+      .skill-list { padding: 12px; }
+      .skill-card {
+        background: #fff;
+        border: 1px solid #e5e5ea;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+      }
+      .skill-icon {
+        font-size: 22px;
+        line-height: 1;
+        flex-shrink: 0;
+        width: 30px;
+        text-align: center;
+      }
+      .skill-body { flex: 1; min-width: 0; }
+      .skill-name {
+        font-size: 13px;
+        font-weight: 600;
+        color: #111827;
+      }
+      .skill-desc {
+        font-size: 11px;
+        color: #6b7280;
+        margin-top: 2px;
+        line-height: 1.4;
+      }
+      .skill-meta {
+        font-size: 11px;
+        color: #6b7280;
+        margin-top: 6px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .skill-state {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 11px;
+        color: #374151;
+      }
+      .skill-state.ok { color: #059669; }
+      .skill-state.fail { color: #dc2626; }
+      .skill-state.running { color: #4f46e5; }
+      .skill-action { flex-shrink: 0; }
+      .skill-action button {
+        margin: 0;
+        padding: 6px 10px;
+        font-size: 12px;
+      }
+
+      /* Toggle switch */
+      .toggle {
+        appearance: none;
+        width: 34px;
+        height: 20px;
+        background: #d1d5db;
+        border-radius: 999px;
+        position: relative;
+        cursor: pointer;
+        transition: background 150ms ease;
+      }
+      .toggle::after {
+        content: '';
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 16px;
+        height: 16px;
+        background: #fff;
+        border-radius: 50%;
+        transition: transform 150ms ease;
+      }
+      .toggle:checked { background: #4f46e5; }
+      .toggle:checked::after { transform: translateX(14px); }
+
+      .skills-footer {
+        padding: 12px 16px 18px;
+        font-size: 11px;
+        color: #6b7280;
+        text-align: center;
+        line-height: 1.5;
+      }
+      .skills-footer a { color: #4f46e5; text-decoration: none; }
+      .skills-footer a:hover { text-decoration: underline; }
     </style>
   </head>
   <body>
     <div class="header">
       <h1>amem</h1>
-      <p>Local-first knowledge capture</p>
+      <p>Chrome skills catalog for AI agents</p>
     </div>
 
-    <div class="section">
-      <h2>Capture</h2>
-      <button id="btn-capture-page" class="primary">Capture this page</button>
-      <button id="btn-screenshot">Screenshot</button>
-      <div id="capture-status" class="status"></div>
+    <div class="tabs" role="tablist">
+      <div id="tab-captures" class="tab active" role="tab" data-panel="panel-captures">Captures</div>
+      <div id="tab-skills" class="tab" role="tab" data-panel="panel-skills">Skills</div>
     </div>
 
-    <div class="section">
-      <h2>Self-recording</h2>
-      <button id="btn-record-start" class="primary">Start</button>
-      <button id="btn-record-stop" class="danger">Stop</button>
-      <div id="record-status" class="status">idle</div>
+    <div id="panel-captures" class="panel active">
+      <div class="section">
+        <h2>Capture</h2>
+        <button id="btn-capture-page" class="primary">Capture this page</button>
+        <button id="btn-screenshot">Screenshot</button>
+        <div id="capture-status" class="status"></div>
+      </div>
+
+      <div class="section">
+        <h2>Self-recording</h2>
+        <button id="btn-record-start" class="primary">Start</button>
+        <button id="btn-record-stop" class="danger">Stop</button>
+        <div id="record-status" class="status">idle</div>
+      </div>
+
+      <div class="section">
+        <h2>Bridge (amem-sh)</h2>
+        <div id="bridge-status" class="status">checking…</div>
+      </div>
+
+      <div class="section">
+        <h2>Recent captures</h2>
+        <ul id="captures" class="captures"><li>none yet</li></ul>
+      </div>
     </div>
 
-    <div class="section">
-      <h2>Bridge (amem-sh)</h2>
-      <div id="bridge-status" class="status">checking…</div>
-    </div>
-
-    <div class="section">
-      <h2>Recent captures</h2>
-      <ul id="captures" class="captures"><li>none yet</li></ul>
+    <div id="panel-skills" class="panel">
+      <div id="skill-list" class="skill-list">
+        <div class="status">loading skills…</div>
+      </div>
+      <div class="skills-footer">
+        Custom skills coming v0.2 — pull request your own at
+        <a href="https://github.com/yiidtw/amem-clipper" target="_blank" rel="noopener">github.com/yiidtw/amem-clipper</a>
+      </div>
     </div>
 
     <script src="sidepanel.js"></script>

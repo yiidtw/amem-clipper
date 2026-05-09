@@ -14,6 +14,31 @@ function send(cmd, extra = {}) {
   });
 }
 
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// --- Tab strip --------------------------------------------------------------
+
+function activateTab(tabEl) {
+  document.querySelectorAll('.tab').forEach((t) => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach((p) => p.classList.remove('active'));
+  tabEl.classList.add('active');
+  const panel = document.getElementById(tabEl.dataset.panel);
+  if (panel) panel.classList.add('active');
+  if (tabEl.dataset.panel === 'panel-skills') refreshSkills();
+}
+
+document.querySelectorAll('.tab').forEach((t) => {
+  t.addEventListener('click', () => activateTab(t));
+});
+
+// --- Captures tab -----------------------------------------------------------
+
 async function refreshCaptures() {
   const res = await send('get_captures');
   const ul = $('captures');
@@ -58,14 +83,6 @@ async function refreshRecording() {
   }
 }
 
-function escapeHtml(s) {
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
 async function onCapturePage() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab) return;
@@ -104,6 +121,84 @@ async function onRecordStop() {
   const d = res.data;
   $('record-status').textContent = `saved ${d.filename} (${Math.round(d.size / 1024)} KB, ${Math.round(d.duration / 1000)}s)`;
 }
+
+// --- Skills tab -------------------------------------------------------------
+
+const runningSkills = new Set();
+
+function lastRunLabel(lastRun) {
+  if (!lastRun) return 'never run';
+  const ago = Math.max(0, Math.floor((Date.now() - lastRun.ts) / 1000));
+  const when = ago < 60 ? `${ago}s ago` : ago < 3600 ? `${Math.floor(ago / 60)}m ago` : `${Math.floor(ago / 3600)}h ago`;
+  return `${lastRun.ok ? '✓' : '✗'} ${escapeHtml(lastRun.summary || '')} · ${when}`;
+}
+
+function renderSkillCard(skill) {
+  const running = runningSkills.has(skill.id);
+  const stateText = running
+    ? '<span class="skill-state running">Running…</span>'
+    : skill.lastRun
+      ? `<span class="skill-state ${skill.lastRun.ok ? 'ok' : 'fail'}">${lastRunLabel(skill.lastRun)}</span>`
+      : '<span class="skill-state">never run</span>';
+
+  const indicator = skill.mode === 'auto'
+    ? `<span>${skill.enabled ? '● Auto' : '○ Auto (off)'}</span>`
+    : '<span>▶ Run</span>';
+
+  let action;
+  if (skill.mode === 'auto') {
+    action = `<input type="checkbox" class="toggle" data-skill-toggle="${skill.id}" ${skill.enabled ? 'checked' : ''} aria-label="enable ${escapeHtml(skill.name)}" />`;
+  } else {
+    action = `<button class="primary" data-skill-run="${skill.id}" ${running ? 'disabled' : ''}>${running ? '…' : 'Run'}</button>`;
+  }
+
+  return `
+    <div class="skill-card">
+      <div class="skill-icon">${escapeHtml(skill.icon || '·')}</div>
+      <div class="skill-body">
+        <div class="skill-name">${escapeHtml(skill.name)}</div>
+        <div class="skill-desc">${escapeHtml(skill.description)}</div>
+        <div class="skill-meta">${indicator}${stateText}</div>
+      </div>
+      <div class="skill-action">${action}</div>
+    </div>`;
+}
+
+async function refreshSkills() {
+  const res = await send('skill_list');
+  const root = $('skill-list');
+  if (!res || !res.success) {
+    root.innerHTML = '<div class="status">failed to load skills</div>';
+    return;
+  }
+  const skills = res.data || [];
+  root.innerHTML = skills.map(renderSkillCard).join('');
+
+  root.querySelectorAll('[data-skill-toggle]').forEach((el) => {
+    el.addEventListener('change', async (e) => {
+      const id = e.target.getAttribute('data-skill-toggle');
+      await send('skill_set_enabled', { skillId: id, enabled: e.target.checked });
+      await refreshSkills();
+    });
+  });
+  root.querySelectorAll('[data-skill-run]').forEach((el) => {
+    el.addEventListener('click', async (e) => {
+      const id = e.target.getAttribute('data-skill-run');
+      runningSkills.add(id);
+      await refreshSkills();
+      try {
+        await send('skill_run', { skillId: id, context: {} });
+      } finally {
+        runningSkills.delete(id);
+        await refreshSkills();
+        // The captures tab might have new entries (e.g. cws-demo-recording).
+        refreshCaptures();
+      }
+    });
+  });
+}
+
+// --- Wiring ------------------------------------------------------------------
 
 $('btn-capture-page').addEventListener('click', onCapturePage);
 $('btn-screenshot').addEventListener('click', onScreenshot);
